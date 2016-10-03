@@ -1,0 +1,43 @@
+{
+  "name": "CallyPebble",
+  "author": "Ali Rawashdeh",
+
+  "companyName": "Scrabosoft",
+  "version": "1.0.0",
+  "keywords": ["pebble-app"],
+  "private": true,
+  "dependencies": {},
+  "pebble": {
+    "displayName": "CallyPebble",
+    "uuid": "c5d036e2-3f58-4b74-8ebd-63ce71038802",
+    "sdkVersion": "3",
+    "enableMultiJS": true,
+    "targetPlatforms": [
+      "aplite",
+      "basalt",
+      "chalk",
+      "diorite"
+    ],
+    "messageKeys": {
+      "KEY_CONFIGURED": 0,
+      "KEY_SUCCESS" :1,
+      "KEY_MESSAGE": 2,
+      "KEY_LIST": 3
+  },
+  "capabilities": [
+      "configurable"
+  ],
+  "resources": {
+          "media": [
+              {
+              "type": "png",
+              "name": "STAR",
+              "file": "star32.png"
+            }
+          ]
+      },
+    "watchapp": {
+      "watchface": false
+    }
+  }
+}

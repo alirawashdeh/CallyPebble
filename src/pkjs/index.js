@@ -5,6 +5,10 @@ var config_url = 'https://cally-pebble-config.herokuapp.com';
 var access_token;
 var list_name;
 var list_id;
+var text;
+
+var Cally = require('./cally-min.js');
+var appt;
 
 function pad(amount, width) {
  var padding = "";
@@ -49,27 +53,48 @@ Pebble.addEventListener('showConfiguration', function() {
 Pebble.addEventListener('appmessage',
   function(e) {
     console.log('Received message: ' + JSON.stringify(e.payload));
-    console.log(list_id);
-    var response = AddItem(e.payload.KEY_MESSAGE);
-    console.log(response);
 
-    var success = 0;
-    if(response.indexOf('created') != -1)
+    if(e.payload.KEY_MESSAGE)
     {
-      success = 1;
+      text = e.payload.KEY_MESSAGE;
+      appt = new Cally(text, new Date());
+
+      var dict = {
+         'KEY_SUGGEST_DATE': GetDateSuggestion(),
+         'KEY_SUGGEST_SUBJECT': appt.subject,
+       };
+
+      // Send to watchapp
+      Pebble.sendAppMessage(dict, function() {
+        console.log('Send successful: ' + JSON.stringify(dict));
+      }, function() {
+        console.log('Send failed!');
+      });
     }
-    var dict = {
-       'KEY_SUCCESS': success,
-       'KEY_LIST': list_name
-     };
 
-    // Send to watchapp
-    Pebble.sendAppMessage(dict, function() {
-      console.log('Send successful: ' + JSON.stringify(dict));
-    }, function() {
-      console.log('Send failed!');
-    });
+    if(e.payload.KEY_GOAHEAD)
+    {
+      console.log(list_id);
+      var response = AddItem(text);
+      console.log(response);
 
+      var success = 0;
+      if(response.indexOf('created') != -1)
+      {
+        success = 1;
+      }
+      var dict = {
+         'KEY_SUCCESS': success,
+         'KEY_LIST': list_name
+       };
+
+      // Send to watchapp
+      Pebble.sendAppMessage(dict, function() {
+        console.log('Send successful: ' + JSON.stringify(dict));
+      }, function() {
+        console.log('Send failed!');
+      });
+    }
 
   }
 );
@@ -82,11 +107,6 @@ function AddItem(text) {
     req.setRequestHeader("X-Client-ID", client_id);
     console.log(urlAddEvent.replace('{ID}',list_id));
 
-    // var json = {
-    //    'list_id': parseInt(list_id),
-    //    'title':text
-    //  };
-
     var Cally = require('./cally-min.js');
     var appt = new Cally(text, new Date());
 
@@ -98,6 +118,20 @@ function AddItem(text) {
      console.log(JSON.stringify(json));
     req.send(JSON.stringify(json));
     return req.responseText;
+}
+
+
+function GetDateSuggestion() {
+  var returnString = appt.date.toDateString();
+    if(appt.timefound)
+    {
+      var hours = appt.date.getHours() + '';
+      var hourspadded = ('00'+hours).substring(hours.length);
+      var minutes = appt.date.getMinutes() + '';
+      var minutespadded = ('00'+minutes).substring(minutes.length);
+      returnString += ' ' + hourspadded + ':' + minutespadded;
+    }
+    return returnString;
 }
 
 Pebble.addEventListener('webviewclosed', function(e) {

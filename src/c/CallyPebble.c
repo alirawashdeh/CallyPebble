@@ -5,15 +5,20 @@
 #define KEY_SUCCESS 1
 #define KEY_MESSAGE 2
 #define KEY_LIST 3
+#define KEY_GOAHEAD 4
+#define KEY_SUGGEST_DATE 5
+#define KEY_SUGGEST_SUBJECT 6
 static bool configured;
 
 // UI
 static Window *s_main_window;
-static TextLayer *s_text_layer;
+static TextLayer *s_text_layer, *s_text_layer_right;
 static TextLayer *title_banner;
-static TextLayer *s_text_sublayer;
-static GBitmap *s_bitmap;
+static TextLayer *s_text_sublayer, *s_text_sublayer_right;
+static GBitmap *s_bitmap, *s_tick_bitmap;
 static BitmapLayer *s_bitmap_layer;
+static ActionBarLayer *s_action_bar_layer;
+
 
 // Timer
 static AppTimer *s_timer;
@@ -34,6 +39,26 @@ static void select_click_handler(ClickRecognizerRef recognizer, void *context)
 static void click_config_provider(void *context)
 {
   window_single_click_subscribe(BUTTON_ID_SELECT, select_click_handler);
+}
+
+static void goahead_click_handler(ClickRecognizerRef recognizer, void *context)
+{
+  text_layer_set_text(s_text_layer_right, "");
+  text_layer_set_size(s_text_layer_right, GSize(0,0));
+  text_layer_set_text(s_text_sublayer_right, "");
+  text_layer_set_size(s_text_sublayer_right, GSize(0,0));
+
+  action_bar_layer_remove_from_window(s_action_bar_layer);
+
+  DictionaryIterator *iterout;
+  app_message_outbox_begin(&iterout);
+  dict_write_cstring(iterout, KEY_GOAHEAD, "1");
+  app_message_outbox_send();
+}
+
+static void goahead_click_provider(void *context)
+{
+  window_single_click_subscribe(BUTTON_ID_SELECT, goahead_click_handler);
 }
 
 /***** Callbacks *****/
@@ -117,6 +142,30 @@ static void dictation_session_callback(DictationSession *session, DictationSessi
           text_layer_set_text(s_text_sublayer, "Press select to try again.");
           window_set_click_config_provider(s_main_window, click_config_provider);
         }
+      } else
+      {
+        Tuple *suggest_sub = dict_find(iter, KEY_SUGGEST_SUBJECT);
+        if(suggest_sub != NULL)
+        {
+          text_layer_set_text(s_text_layer, " ");
+          text_layer_set_text(s_text_sublayer, " ");
+
+          Layer *window_layer = window_get_root_layer(s_main_window);
+          GRect bounds = layer_get_bounds(window_layer);
+          text_layer_set_size(s_text_layer_right, GSize(bounds.size.w - 50, 40));
+          text_layer_set_size(s_text_sublayer_right, GSize(bounds.size.w -50, bounds.size.h - 86));
+
+          text_layer_set_text(s_text_layer_right, suggest_sub->value->cstring);
+
+          Tuple *suggest_date = dict_find(iter, KEY_SUGGEST_DATE);
+          if(suggest_date != NULL)
+          {
+            text_layer_set_text(s_text_sublayer_right, suggest_date->value->cstring);
+          }
+
+          action_bar_layer_add_to_window(s_action_bar_layer, s_main_window);
+          window_set_click_config_provider(s_main_window, goahead_click_provider);
+        }
       }
     }
   }
@@ -160,12 +209,33 @@ static void dictation_session_callback(DictationSession *session, DictationSessi
     text_layer_set_text_color(s_text_sublayer,GColorBlack);
     layer_add_child(window_layer, text_layer_get_layer(s_text_sublayer));
 
+
+    // Draw text right aligned
+    s_text_layer_right = text_layer_create(GRect(10, 46, 0,0));
+    text_layer_set_font(s_text_layer_right, fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD));
+    text_layer_set_text_alignment(s_text_layer_right, GTextAlignmentRight);
+    text_layer_set_text_color(s_text_layer_right,GColorBlack);
+      layer_add_child(window_layer, text_layer_get_layer(s_text_layer_right));
+
+    // Draw subtext right aligned
+    s_text_sublayer_right = text_layer_create(GRect(10, 86, 0,0));
+    text_layer_set_font(s_text_sublayer_right, fonts_get_system_font(FONT_KEY_GOTHIC_18));
+    text_layer_set_text_alignment(s_text_sublayer_right, GTextAlignmentRight);
+    text_layer_set_text_color(s_text_layer_right,GColorBlack);
+        layer_add_child(window_layer, text_layer_get_layer(s_text_sublayer_right));
+
     // Draw Icon
     s_bitmap = gbitmap_create_with_resource(RESOURCE_ID_STAR);
     s_bitmap_layer = bitmap_layer_create(GRect((bounds.size.w/2) -16, 3, 32, 32));
     bitmap_layer_set_bitmap(s_bitmap_layer, s_bitmap);
     bitmap_layer_set_compositing_mode(s_bitmap_layer, GCompOpSet);
     layer_add_child(window_layer, bitmap_layer_get_layer(s_bitmap_layer));
+
+    // Action bar
+    s_tick_bitmap = gbitmap_create_with_resource(RESOURCE_ID_TICK);
+    s_action_bar_layer = action_bar_layer_create();
+    action_bar_layer_set_icon(s_action_bar_layer, BUTTON_ID_SELECT, s_tick_bitmap);
+
   }
 
   static void window_unload(Window *window)
@@ -173,8 +243,12 @@ static void dictation_session_callback(DictationSession *session, DictationSessi
     text_layer_destroy(title_banner);
     text_layer_destroy(s_text_layer);
     text_layer_destroy(s_text_sublayer);
+    text_layer_destroy(s_text_layer_right);
+    text_layer_destroy(s_text_sublayer_right);
     gbitmap_destroy(s_bitmap);
+    gbitmap_destroy(s_tick_bitmap);
     bitmap_layer_destroy(s_bitmap_layer);
+    action_bar_layer_destroy(s_action_bar_layer);
   }
 
   static void init()

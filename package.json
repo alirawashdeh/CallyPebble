@@ -22,20 +22,28 @@
       "KEY_CONFIGURED": 0,
       "KEY_SUCCESS" :1,
       "KEY_MESSAGE": 2,
-      "KEY_LIST": 3
-  },
-  "capabilities": [
+      "KEY_LIST": 3,
+      "KEY_GOAHEAD": 4,
+      "KEY_SUGGEST_DATE": 5,
+      "KEY_SUGGEST_SUBJECT": 6
+    },
+    "capabilities": [
       "configurable"
-  ],
-  "resources": {
-          "media": [
-              {
-              "type": "png",
-              "name": "STAR",
-              "file": "star32.png"
-            }
-          ]
-      },
+    ],
+    "resources": {
+      "media": [
+        {
+          "type": "png",
+          "name": "STAR",
+          "file": "star32.png"
+        },
+        {
+          "type": "bitmap",
+          "name": "TICK",
+          "file": "tick.png"
+        }
+      ]
+    },
     "watchapp": {
       "watchface": false
     }
